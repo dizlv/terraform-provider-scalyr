@@ -1,4 +1,4 @@
-module ansoni/terraform-provider-scalyr/scalyr-go
+module github.com/ansoni/terraform-provider-scalyr/scalyr-go
 
 go 1.14
 
