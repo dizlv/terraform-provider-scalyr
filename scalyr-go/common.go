@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/http/httputil"
 	"os"
 )
 
@@ -162,12 +163,33 @@ func (r *Request) jsonResponse(response interface{}) error {
 	}
 	req.Header.Add("Content-Type", "application/json")
 	httpClient := http.Client{}
+	request, err := httputil.DumpRequest(req, true)
+	if err != nil {
+		return err
+	}
+
+	log.Printf("Request: %s", request)
+
 	resp, err := httpClient.Do(req)
 	if err != nil {
 		r.err = err
 		log.Printf("Error %v", r.err)
 		return err
 	}
+
+	statusOK := resp.StatusCode >= 200 && resp.StatusCode < 300
+
+	if !statusOK {
+		respDump, err := httputil.DumpResponse(resp, true)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		fmt.Printf("RESPONSE:\n%s", string(respDump))
+
+		return fmt.Errorf("wrong status code %d", resp.StatusCode)
+	}
+
 	r.responseBody, r.err = ioutil.ReadAll(resp.Body)
 	log.Printf("Response")
 	for _, chunk := range Chunk(string(r.responseBody), 200) {
