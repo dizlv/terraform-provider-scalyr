@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/terraform/helper/schema"
 	scalyr "github.com/ansoni/terraform-provider-scalyr/scalyr-go"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func datasourceTeams() *schema.Resource {

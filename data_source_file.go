@@ -1,9 +1,8 @@
 package main
 
 import (
-	"github.com/hashicorp/terraform/helper/schema"
-	_ "github.com/hashicorp/terraform/terraform"
 	scalyr "github.com/ansoni/terraform-provider-scalyr/scalyr-go"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"time"
 )
 
