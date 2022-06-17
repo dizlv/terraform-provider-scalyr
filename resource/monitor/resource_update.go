@@ -2,7 +2,6 @@ package monitor
 
 import (
 	"context"
-	"fmt"
 	scalyr "github.com/ansoni/terraform-provider-scalyr/scalyr-go"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -10,17 +9,36 @@ import (
 
 func resourceMonitorUpdate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*scalyr.ScalyrConfig)
+	id := data.Id()
 
-	// File api does not has specific ID provided, so we create one by combining file path + version.
-	label := data.Get("label").(string)
+	monitorType := data.Get(TypeArg).(string)
+	region := data.Get(AwsRegionArg).(string)
+	roleToAssume := data.Get(IamRoleToAssumeArg).(string)
+	queueUrl := data.Get(QueueUrlArg).(string)
+	fileFormat := data.Get(FileFormatArg).(string)
+	hostName := data.Get(HostNameArg).(string)
+	parser := data.Get(ParserArg).(string)
+	label := data.Get(LabelArg).(string)
 
-	monitors, err := getMonitorConfigurationFile(client)
+	file, err := getMonitorConfigurationFile(client)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	index := findMonitorByLabel(label, monitors.Monitors)
-	fmt.Printf("%d", index)
+	index := findMonitorByLabel(id, file.Monitors)
 
-	return diag.FromErr(updateMonitorsConfigurationFile(monitors, client))
+	updatedMonitor := scalyr.NewMonitor(
+		monitorType,
+		region,
+		roleToAssume,
+		queueUrl,
+		fileFormat,
+		hostName,
+		parser,
+		label,
+	)
+
+	file.Monitors[index] = updatedMonitor
+
+	return diag.FromErr(updateMonitorsConfigurationFile(file, client))
 }
