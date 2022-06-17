@@ -1,4 +1,4 @@
-package main
+package scalyr
 
 import (
 	"os"

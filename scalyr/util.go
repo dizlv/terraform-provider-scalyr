@@ -1,4 +1,4 @@
-package monitor
+package scalyr
 
 import (
 	"encoding/json"

@@ -1,4 +1,4 @@
-package main
+package scalyr
 
 import (
 	scalyr "github.com/ansoni/terraform-provider-scalyr/scalyr-go"

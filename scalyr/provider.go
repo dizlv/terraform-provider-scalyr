@@ -1,7 +1,6 @@
-package main
+package scalyr
 
 import (
-	"ansoni/terraform-provider-scalyr/resource/monitor"
 	"context"
 	scalyr "github.com/ansoni/terraform-provider-scalyr/scalyr-go"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -17,6 +16,8 @@ const (
 	WriteConfigTokenEnvArg = "SCALYR_WRITECONFIG_TOKEN"
 	TeamEnvArg             = "SCALYR_TEAM"
 )
+
+var mutexKV = NewMutexKV()
 
 func CreateProvider() *schema.Provider {
 	return &schema.Provider{
@@ -67,7 +68,7 @@ func CreateProvider() *schema.Provider {
 		ResourcesMap: map[string]*schema.Resource{
 			"scalyr_event":   resourceEvent(),
 			"scalyr_file":    resourceFile(),
-			"scalyr_monitor": monitor.Resource(),
+			"scalyr_monitor": resourceMonitor(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
 			"scalyr_file":   datasourceFile(),
