@@ -5,6 +5,7 @@ import (
 	scalyr "github.com/ansoni/terraform-provider-scalyr/scalyr-go"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"sync"
 )
 
 const (
@@ -17,7 +18,19 @@ const (
 	TeamEnvArg             = "SCALYR_TEAM"
 )
 
-var mutexKV = NewMutexKV()
+type Synchronizer struct {
+	monitorLock sync.Mutex
+}
+
+func (synchronizer *Synchronizer) LockMonitorsFile() {
+	synchronizer.monitorLock.Lock()
+}
+
+func (synchronizer *Synchronizer) UnlockMonitorsFile() {
+	synchronizer.monitorLock.Unlock()
+}
+
+var synchronizer = Synchronizer{}
 
 func CreateProvider() *schema.Provider {
 	return &schema.Provider{
@@ -65,17 +78,25 @@ func CreateProvider() *schema.Provider {
 				Description: "Scalyr Team Identifier",
 			},
 		},
+
 		ResourcesMap: map[string]*schema.Resource{
-			"scalyr_event":   resourceEvent(),
-			"scalyr_file":    resourceFile(),
-			"scalyr_monitor": resourceMonitor(),
+			"scalyr_event":                 resourceEvent(),
+			"scalyr_file":                  resourceFile(),
+			"scalyr_monitor":               resourceMonitor(),
+			"scalyr_parser":                resourceParser(),
+			"scalyr_parser_format":         resourceParserFormat(),
+			"scalyr_parser_format_rewrite": resourceParserFormatRewrite(),
+			"scalyr_parser_line_grouper":   resourceParserLineGrouper(),
+			"scalyr_parser_pattern":        resourceParserPattern(),
 		},
+
 		DataSourcesMap: map[string]*schema.Resource{
 			"scalyr_file":   datasourceFile(),
 			"scalyr_query":  datasourceQuery(),
 			"scalyr_teams":  datasourceTeams(),
 			"scalyr_tokens": datasourceTokens(),
 		},
+
 		ConfigureContextFunc: providerConfigure,
 	}
 }
@@ -96,8 +117,6 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 		WriteConfig: writeConfigToken,
 	}
 
-	var diagnostics diag.Diagnostics
-
 	client, err := scalyr.NewClient(&scalyr.ScalyrConfig{
 		Endpoint: endpoint,
 		Region:   region,
@@ -109,5 +128,5 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 		return nil, diag.FromErr(err)
 	}
 
-	return client, diagnostics
+	return client, nil
 }
