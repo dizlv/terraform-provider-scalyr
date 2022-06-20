@@ -107,8 +107,8 @@ func resourceMonitorCreate(ctx context.Context, data *schema.ResourceData, meta 
 
 	var diagnostics diag.Diagnostics
 
-	mutexKV.Lock("monitors")
-	defer mutexKV.Unlock("monitors")
+	synchronizer.LockMonitorsFile()
+	defer synchronizer.UnlockMonitorsFile()
 
 	// Configure new monitor with appropriate data.
 	newMonitor := scalyr.NewMonitor(
@@ -152,8 +152,8 @@ func resourceMonitorDelete(ctx context.Context, data *schema.ResourceData, meta 
 	// File api does not has specific ID provided, so we create one by combining file path + version.
 	label := data.Id()
 
-	mutexKV.Lock("monitors")
-	defer mutexKV.Unlock("monitors")
+	synchronizer.LockMonitorsFile()
+	defer synchronizer.UnlockMonitorsFile()
 
 	file, err := getMonitorConfigurationFile(client)
 	if err != nil {
@@ -186,8 +186,8 @@ func resourceMonitorRead(ctx context.Context, data *schema.ResourceData, meta in
 	client := meta.(*scalyr.ScalyrConfig)
 	label := data.Id()
 
-	mutexKV.Lock("monitors")
-	defer mutexKV.Unlock("monitors")
+	synchronizer.LockMonitorsFile()
+	defer synchronizer.UnlockMonitorsFile()
 
 	var diagnostics diag.Diagnostics
 
@@ -227,8 +227,8 @@ func resourceMonitorUpdate(ctx context.Context, data *schema.ResourceData, meta 
 	client := meta.(*scalyr.ScalyrConfig)
 	id := data.Id()
 
-	mutexKV.Lock("monitors")
-	defer mutexKV.Unlock("monitors")
+	synchronizer.LockMonitorsFile()
+	defer synchronizer.UnlockMonitorsFile()
 
 	monitorType := data.Get(TypeArg).(string)
 	region := data.Get(AwsRegionArg).(string)
