@@ -2,6 +2,7 @@ package sdk
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -153,7 +154,7 @@ func prepareRequestBody(data interface{}) ([]byte, error) {
 	}
 }
 
-func (r *Request) jsonResponse(response interface{}) error {
+func (r *Request) jsonResponse(ctx context.Context, response interface{}) error {
 	if r.err != nil {
 		return r.err
 	}

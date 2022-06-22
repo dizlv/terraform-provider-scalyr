@@ -20,11 +20,11 @@ type ScalyrConfig struct {
 	Team       string
 }
 
-func (c *ScalyrConfig) hasTeam() bool {
-	return c.Team != ""
+func (scalyr *ScalyrConfig) hasTeam() bool {
+	return scalyr.Team != ""
 }
 
-var regionEndpoints map[string]string = map[string]string{"us": "https://app.scalyr.com/", "eu": "https://app.eu.scalyr.com/"}
+var regionEndpoints = map[string]string{"us": "https://app.scalyr.com/", "eu": "https://app.eu.scalyr.com/"}
 
 func initialize(config *ScalyrConfig) {
 	if config.Region == "" {
@@ -48,7 +48,7 @@ func initialize(config *ScalyrConfig) {
 		config.Endpoint = getEnvWithDefault("SCALYR_SERVER", regionEndpoint)
 	}
 	// Add an SSL prefix if you don't tell us
-	if ! strings.HasPrefix(config.Endpoint, "http") {
+	if !strings.HasPrefix(config.Endpoint, "http") {
 		config.Endpoint = fmt.Sprintf("https://%s", config.Endpoint)
 	}
 }
