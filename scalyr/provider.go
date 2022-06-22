@@ -19,15 +19,18 @@ const (
 )
 
 type Synchronizer struct {
-	monitorLock sync.Mutex
+	mutexes sync.Map
 }
 
-func (synchronizer *Synchronizer) LockMonitorsFile() {
-	synchronizer.monitorLock.Lock()
-}
+func (synchronizer *Synchronizer) Lock(key string) func() {
+	value, _ := synchronizer.mutexes.LoadOrStore(key, &sync.Mutex{})
+	mutex := value.(*sync.Mutex)
 
-func (synchronizer *Synchronizer) UnlockMonitorsFile() {
-	synchronizer.monitorLock.Unlock()
+	mutex.Lock()
+
+	return func() {
+		mutex.Unlock()
+	}
 }
 
 var synchronizer = Synchronizer{}
