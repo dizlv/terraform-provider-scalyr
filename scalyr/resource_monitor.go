@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"golang.org/x/exp/slices"
-	"log"
 )
+
+const monitorsLockName = "/scalyr/monitors"
 
 const (
 	TypeArg            = "monitor_type"
@@ -90,9 +90,6 @@ func resourceMonitor() *schema.Resource {
 	}
 }
 
-// resourceMonitorCreate executes API call on the File api to provision monitor with provided
-// data. As a side effect this function triggers another request to retrieve information on just
-// submitted file.
 func resourceMonitorCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	monitorType := data.Get(TypeArg).(string)
 	region := data.Get(AwsRegionArg).(string)
@@ -104,132 +101,66 @@ func resourceMonitorCreate(ctx context.Context, data *schema.ResourceData, meta 
 	label := data.Get(LabelArg).(string)
 
 	client := meta.(*scalyr.ScalyrConfig)
+	input := &scalyr.CreateMonitorInput{
+		Type:         monitorType,
+		Region:       region,
+		RoleToAssume: roleToAssume,
+		QueueUrl:     queueUrl,
+		FileFormat:   fileFormat,
+		HostName:     hostName,
+		Parser:       parser,
+		Label:        label,
+	}
 
-	var diagnostics diag.Diagnostics
+	unlock := synchronizer.Lock(monitorsLockName)
+	defer unlock()
 
-	synchronizer.LockMonitorsFile()
-	defer synchronizer.UnlockMonitorsFile()
-
-	// Configure new monitor with appropriate data.
-	newMonitor := scalyr.NewMonitor(
-		monitorType,
-		region,
-		roleToAssume,
-		queueUrl,
-		fileFormat,
-		hostName,
-		parser,
-		label,
-	)
-
-	file, err := getMonitorConfigurationFile(client)
-	if err != nil {
+	if output, err := client.CreateMonitor(ctx, input); err != nil {
 		return diag.FromErr(err)
+	} else {
+		data.SetId(output.Monitor.Label)
 	}
-
-	index := findMonitorByLabel(label, file.Monitors)
-
-	if index != -1 {
-		return diag.Errorf("Monitor with configured label already exist")
-	}
-
-	// Insert new element
-	file.Monitors = append(file.Monitors, newMonitor)
-
-	err = updateMonitorsConfigurationFile(file, client)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	data.SetId(fmt.Sprintf("%s", label))
-
-	return diagnostics
-}
-
-func resourceMonitorDelete(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*scalyr.ScalyrConfig)
-
-	// File api does not has specific ID provided, so we create one by combining file path + version.
-	label := data.Id()
-
-	synchronizer.LockMonitorsFile()
-	defer synchronizer.UnlockMonitorsFile()
-
-	file, err := getMonitorConfigurationFile(client)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	index := findMonitorByLabel(label, file.Monitors)
-
-	if index == -1 {
-		return diag.Errorf("Monitor is not present in submitted configuration file")
-	}
-
-	file.Monitors = slices.Delete(file.Monitors, index, index+1)
-
-	log.Printf("Deleting {%v}", file.Monitors)
-
-	err = updateMonitorsConfigurationFile(file, client)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	// Set terraform id to "" which means that resource has been deleted successfully and can
-	// be dropped from terraform state.
-	data.SetId("")
 
 	return nil
 }
 
 func resourceMonitorRead(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*scalyr.ScalyrConfig)
-	label := data.Id()
 
-	synchronizer.LockMonitorsFile()
-	defer synchronizer.UnlockMonitorsFile()
+	input := &scalyr.ReadMonitorInput{
+		Label: data.Id(),
+	}
 
-	var diagnostics diag.Diagnostics
+	unlock := synchronizer.Lock(monitorsLockName)
+	defer unlock()
 
-	file, err := getMonitorConfigurationFile(client)
-	if err != nil {
+	if output, err := client.ReadMonitor(ctx, input); err != nil {
+		if err == scalyr.MonitorNotFound && !data.IsNewResource() {
+			data.SetId("")
+
+			return nil
+		}
+
 		return diag.FromErr(err)
+	} else {
+		monitor := output.Monitor
+
+		data.Set(TypeArg, monitor.Type)
+		data.Set(AwsRegionArg, monitor.Region)
+		data.Set(IamRoleToAssumeArg, monitor.RoleToAssume)
+		data.Set(QueueUrlArg, monitor.QueueUrl)
+		data.Set(FileFormatArg, monitor.FileFormat)
+		data.Set(HostNameArg, monitor.HostName)
+		data.Set(ParserArg, monitor.Parser)
+		data.Set(LabelArg, monitor.Label)
+
+		data.SetId(fmt.Sprintf("%v", monitor.Label))
 	}
 
-	index := findMonitorByLabel(label, file.Monitors)
-
-	log.Printf("Looking for label %s in monitors %v", label, file.Monitors)
-
-	if index == -1 && !data.IsNewResource() {
-		data.SetId("")
-
-		return nil
-	}
-
-	monitor := file.Monitors[index]
-
-	// todo: handle this stuff in diags
-	data.Set(TypeArg, monitor.Type)
-	data.Set(AwsRegionArg, monitor.Region)
-	data.Set(IamRoleToAssumeArg, monitor.RoleToAssume)
-	data.Set(QueueUrlArg, monitor.QueueUrl)
-	data.Set(FileFormatArg, monitor.FileFormat)
-	data.Set(HostNameArg, monitor.HostName)
-	data.Set(ParserArg, monitor.Parser)
-	data.Set(LabelArg, monitor.Label)
-
-	data.SetId(fmt.Sprintf("%v", monitor.Label))
-
-	return diagnostics
+	return nil
 }
 
 func resourceMonitorUpdate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*scalyr.ScalyrConfig)
-	id := data.Id()
-
-	synchronizer.LockMonitorsFile()
-	defer synchronizer.UnlockMonitorsFile()
-
 	monitorType := data.Get(TypeArg).(string)
 	region := data.Get(AwsRegionArg).(string)
 	roleToAssume := data.Get(IamRoleToAssumeArg).(string)
@@ -239,31 +170,43 @@ func resourceMonitorUpdate(ctx context.Context, data *schema.ResourceData, meta 
 	parser := data.Get(ParserArg).(string)
 	label := data.Get(LabelArg).(string)
 
-	file, err := getMonitorConfigurationFile(client)
-	if err != nil {
+	client := meta.(*scalyr.ScalyrConfig)
+	input := &scalyr.UpdateMonitorInput{
+		Type:         monitorType,
+		Region:       region,
+		RoleToAssume: roleToAssume,
+		QueueUrl:     queueUrl,
+		FileFormat:   fileFormat,
+		HostName:     hostName,
+		Parser:       parser,
+		Label:        label,
+	}
+
+	unlock := synchronizer.Lock(monitorsLockName)
+	defer unlock()
+
+	if _, err := client.UpdateMonitor(ctx, input); err != nil {
 		return diag.FromErr(err)
 	}
 
-	index := findMonitorByLabel(id, file.Monitors)
+	return nil
+}
 
-	updatedMonitor := scalyr.NewMonitor(
-		monitorType,
-		region,
-		roleToAssume,
-		queueUrl,
-		fileFormat,
-		hostName,
-		parser,
-		label,
-	)
+func resourceMonitorDelete(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	client := meta.(*scalyr.ScalyrConfig)
 
-	file.Monitors[index] = updatedMonitor
-
-	if err := updateMonitorsConfigurationFile(file, client); err != nil {
-		return diag.FromErr(err)
+	input := &scalyr.DeleteMonitorInput{
+		Label: data.Id(),
 	}
 
-	data.SetId(fmt.Sprintf("%s", label))
+	unlock := synchronizer.Lock(monitorsLockName)
+	defer unlock()
+
+	if _, err := client.DeleteMonitor(ctx, input); err != nil {
+		return diag.FromErr(err)
+	} else {
+		data.SetId("")
+	}
 
 	return nil
 }
