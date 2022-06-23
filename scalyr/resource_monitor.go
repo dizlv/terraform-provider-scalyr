@@ -1,9 +1,9 @@
 package scalyr
 
 import (
-	scalyr "ansoni/terraform-provider-scalyr/scalyr-go"
 	"context"
 	"fmt"
+	scalyr "github.com/ansoni/terraform-provider-scalyr/scalyr-go"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
