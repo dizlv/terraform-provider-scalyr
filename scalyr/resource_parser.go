@@ -1,14 +1,17 @@
 package scalyr
 
 import (
-	scalyr "ansoni/terraform-provider-scalyr/scalyr-go"
 	"context"
+	"encoding/json"
+	"fmt"
+	scalyr "github.com/ansoni/terraform-provider-scalyr/scalyr-go"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 // Hardcoded terraform input argument names
 const (
+	NameArg                   = "name"
 	TimeZoneArg               = "timezone"
 	IntermittentTimestampsArg = "intermittent_timestamps"
 	AliasToArg                = "alias_to"
@@ -19,6 +22,12 @@ const (
 )
 
 var ParserSchema = map[string]*schema.Schema{
+	NameArg: {
+		Type:        schema.TypeString,
+		Description: "",
+		Required:    true,
+	},
+
 	TimeZoneArg: {
 		Type:        schema.TypeString,
 		Description: "",
@@ -40,7 +49,7 @@ var ParserSchema = map[string]*schema.Schema{
 	FormatsArg: {
 		Type:     schema.TypeList,
 		Required: true,
-		MinItems: 1,
+		Elem:     &schema.Schema{Type: schema.TypeString},
 	},
 
 	AttributesArg: {
@@ -54,12 +63,14 @@ var ParserSchema = map[string]*schema.Schema{
 		Type:        schema.TypeList,
 		Description: "",
 		Optional:    true,
+		Elem:        &schema.Schema{Type: schema.TypeString},
 	},
 
 	PatternsArg: {
 		Type:        schema.TypeList,
 		Description: "",
 		Optional:    true,
+		Elem:        &schema.Schema{Type: schema.TypeString},
 	},
 }
 
@@ -74,13 +85,42 @@ func resourceParser() *schema.Resource {
 	}
 }
 
+func formatAttributes(attributes map[string]interface{}) scalyr.Attributes {
+	formatted := make(scalyr.Attributes, len(attributes))
+
+	for key, value := range attributes {
+		strValue := fmt.Sprintf("%v", value)
+
+		formatted[key] = strValue
+	}
+
+	return formatted
+}
+
 func resourceParserCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*scalyr.ScalyrConfig)
 
-	formats := data.Get(FormatsArg)
+	name := data.Get(NameArg).(string)
+	formatsRaw := data.Get(FormatsArg).([]interface{})
+
+	formats := make(scalyr.Formats, len(formatsRaw))
+
+	// todo: refactor this bit.
+	for _, f := range formatsRaw {
+		var format scalyr.Format
+
+		d := []byte(fmt.Sprint(f))
+
+		if err := json.Unmarshal(d, &format); err != nil {
+			return diag.FromErr(err)
+		}
+
+		formats = append(formats, format)
+	}
 
 	input := &scalyr.CreateParserInput{
-		Formats: formats.(scalyr.Formats),
+		Name:    name,
+		Formats: formats,
 	}
 
 	if v, ok := data.GetOk(TimeZoneArg); ok {
@@ -96,7 +136,7 @@ func resourceParserCreate(ctx context.Context, data *schema.ResourceData, meta i
 	}
 
 	if v, ok := data.GetOk(AttributesArg); ok {
-		input.Attributes = v.(scalyr.Attributes)
+		input.Attributes = formatAttributes(v.(map[string]interface{}))
 	}
 
 	if v, ok := data.GetOk(LineGroupersArg); ok {
@@ -110,7 +150,7 @@ func resourceParserCreate(ctx context.Context, data *schema.ResourceData, meta i
 	if output, err := client.CreateParser(ctx, input); err != nil {
 		return diag.FromErr(err)
 	} else {
-		data.SetId(output.Path)
+		data.SetId(output.Name)
 	}
 
 	return nil
@@ -166,14 +206,10 @@ func resourceParserUpdate(ctx context.Context, data *schema.ResourceData, meta i
 
 	if _, err := client.ReadParser(ctx, readParserInput); err != nil {
 		return diag.FromErr(err)
-	} else {
-
 	}
 
 	if _, err := client.UpdateParser(ctx, input); err != nil {
 		return diag.FromErr(err)
-	} else {
-
 	}
 
 	return nil
@@ -183,7 +219,7 @@ func resourceParserDelete(ctx context.Context, data *schema.ResourceData, meta i
 	client := meta.(*scalyr.ScalyrConfig)
 
 	input := &scalyr.DeleteParserInput{
-		Path: data.Id(),
+		Name: data.Id(),
 	}
 
 	if _, err := client.DeleteParser(ctx, input); err != nil {
