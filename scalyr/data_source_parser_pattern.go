@@ -40,27 +40,12 @@ var ParserPatternSchema = map[string]*schema.Schema{
 
 func resourceParserPattern() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceParserPatternCreate,
-		ReadContext:   resourceParserPatternRead,
-		UpdateContext: resourceParserPatternUpdate,
-		DeleteContext: resourceParserPatternDelete,
+		ReadContext: resourceParserPatternRead,
 
 		Schema: ParserPatternSchema,
 	}
 }
 
-func resourceParserPatternCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	return nil
-}
-
 func resourceParserPatternRead(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	return nil
-}
-
-func resourceParserPatternUpdate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	return nil
-}
-
-func resourceParserPatternDelete(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	return nil
 }

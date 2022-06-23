@@ -1,9 +1,12 @@
 package scalyr
 
 import (
+	scalyr "ansoni/terraform-provider-scalyr/scalyr-go"
 	"context"
+	"encoding/json"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"strconv"
 )
 
 var ParserLineGrouperSchema = map[string]*schema.Schema{
@@ -52,27 +55,52 @@ var ParserLineGrouperSchema = map[string]*schema.Schema{
 
 func resourceParserLineGrouper() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceParserLineGrouperCreate,
-		ReadContext:   resourceParserLineGrouperRead,
-		UpdateContext: resourceParserLineGrouperUpdate,
-		DeleteContext: resourceParserLineGrouperDelete,
+		ReadContext: resourceParserLineGrouperRead,
 
 		Schema: ParserLineGrouperSchema,
 	}
 }
 
-func resourceParserLineGrouperCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	return nil
-}
-
 func resourceParserLineGrouperRead(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	return nil
-}
+	document := &scalyr.LineGrouper{}
 
-func resourceParserLineGrouperUpdate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	return nil
-}
+	if v, ok := data.GetOk("start"); ok {
+		document.Start = v.(string)
+	}
 
-func resourceParserLineGrouperDelete(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	if v, ok := data.GetOk("continue_through"); ok {
+		document.ContinueThrough = v.(string)
+	}
+
+	if v, ok := data.GetOk("continue_past"); ok {
+		document.ContinuePast = v.(string)
+	}
+
+	if v, ok := data.GetOk("halt_before"); ok {
+		document.HaltBefore = v.(string)
+	}
+
+	if v, ok := data.GetOk("halt_with"); ok {
+		document.HaltWith = v.(string)
+	}
+
+	if v, ok := data.GetOk("max_chars"); ok {
+		document.MaxChars = v.(int)
+	}
+
+	if v, ok := data.GetOk("max_lines"); ok {
+		document.MaxLines = v.(int)
+	}
+
+	jsonDocument, err := json.MarshalIndent(document, "", " ")
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	jsonString := string(jsonDocument)
+
+	data.Set("json", jsonString)
+	data.SetId(strconv.Itoa(StringHashCode(jsonString)))
+
 	return nil
 }

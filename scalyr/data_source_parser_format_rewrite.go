@@ -1,9 +1,12 @@
 package scalyr
 
 import (
+	scalyr "ansoni/terraform-provider-scalyr/scalyr-go"
 	"context"
+	"encoding/json"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"strconv"
 )
 
 var ParserFormatRewriteSchema = map[string]*schema.Schema{
@@ -40,27 +43,38 @@ var ParserFormatRewriteSchema = map[string]*schema.Schema{
 
 func resourceParserFormatRewrite() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceParserFormatRewriteCreate,
-		ReadContext:   resourceParserFormatRewriteRead,
-		UpdateContext: resourceParserFormatRewriteUpdate,
-		DeleteContext: resourceParserFormatRewriteDelete,
+		ReadContext: resourceParserFormatRewriteRead,
 
 		Schema: ParserFormatRewriteSchema,
 	}
 }
 
-func resourceParserFormatRewriteCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	return nil
-}
-
 func resourceParserFormatRewriteRead(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	return nil
-}
+	input := data.Get("input").(string)
+	output := data.Get("output").(string)
+	match := data.Get("match").(string)
+	replace := data.Get("replace").(string)
 
-func resourceParserFormatRewriteUpdate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	return nil
-}
+	document := &scalyr.Rewrite{
+		Input:   input,
+		Output:  output,
+		Match:   match,
+		Replace: replace,
+	}
 
-func resourceParserFormatRewriteDelete(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	if v, ok := data.GetOk("replace_all"); ok {
+		document.ReplaceAll = v.(bool)
+	}
+
+	jsonDocument, err := json.MarshalIndent(document, "", " ")
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	jsonString := string(jsonDocument)
+
+	data.Set("json", jsonString)
+	data.SetId(strconv.Itoa(StringHashCode(jsonString)))
+
 	return nil
 }
