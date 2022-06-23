@@ -1,7 +1,9 @@
 package scalyr
 
 import (
+	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"time"
 
 	scalyr "github.com/ansoni/terraform-provider-scalyr/scalyr-go"
@@ -10,7 +12,7 @@ import (
 
 func datasourceTeams() *schema.Resource {
 	return &schema.Resource{
-		Read: datasourceTeamRead,
+		ReadContext: datasourceTeamRead,
 		Schema: map[string]*schema.Schema{
 			"teams": {
 				Type:     schema.TypeSet,
@@ -21,14 +23,14 @@ func datasourceTeams() *schema.Resource {
 	}
 }
 
-func datasourceTeamRead(d *schema.ResourceData, meta interface{}) error {
+func datasourceTeamRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*scalyr.ScalyrConfig)
-	teams, err := client.ListTeams()
+	teams, err := client.ListTeams(ctx)
 	if err != nil {
-		return fmt.Errorf("Error retrieving teams: %s", err)
+		return diag.FromErr(fmt.Errorf("Error retrieving teams: %s", err))
 	}
 	if err := d.Set("teams", teams); err != nil {
-		return fmt.Errorf("Error setting teams: %s", err)
+		return diag.FromErr(fmt.Errorf("Error setting teams: %s", err))
 	}
 	d.SetId(time.Now().UTC().String())
 	return nil

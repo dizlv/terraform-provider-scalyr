@@ -1,7 +1,9 @@
 package scalyr
 
 import (
+	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"time"
 
 	scalyr "github.com/ansoni/terraform-provider-scalyr/scalyr-go"
@@ -10,7 +12,7 @@ import (
 
 func datasourceTokens() *schema.Resource {
 	return &schema.Resource{
-		Read: datasourceTokenRead,
+		ReadContext: datasourceTokenRead,
 		Schema: map[string]*schema.Schema{
 			"tokens": {
 				Type:     schema.TypeSet,
@@ -21,9 +23,9 @@ func datasourceTokens() *schema.Resource {
 	}
 }
 
-func datasourceTokenRead(d *schema.ResourceData, meta interface{}) error {
+func datasourceTokenRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*scalyr.ScalyrConfig)
-	tokens, err := client.ListTokens()
+	tokens, err := client.ListTokens(ctx)
 	tfTokens := make([]map[string]string, len(*tokens))
 	for i, token := range *tokens {
 		tfTokens[i] = make(map[string]string)
@@ -34,10 +36,10 @@ func datasourceTokenRead(d *schema.ResourceData, meta interface{}) error {
 		tfTokens[i]["create_date"] = token.CreateDate.String()
 	}
 	if err != nil {
-		return fmt.Errorf("Error retrieving tokens: %s", err)
+		return diag.FromErr(fmt.Errorf("Error retrieving tokens: %s", err))
 	}
 	if err := d.Set("tokens", tfTokens); err != nil {
-		return fmt.Errorf("Error setting tokens: %s", err)
+		return diag.FromErr(fmt.Errorf("Error setting tokens: %s", err))
 	}
 	d.SetId(time.Now().UTC().String())
 	return nil

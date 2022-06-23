@@ -1,6 +1,7 @@
 package sdk
 
 import (
+	"context"
 	_ "encoding/json"
 	"log"
 	"strconv"
@@ -49,9 +50,9 @@ type ListTokensResponse struct {
 	ListTokensResponseParams
 }
 
-func (scalyr *ScalyrConfig) ListTokens() (*[]Token, error) {
+func (scalyr *ScalyrConfig) ListTokens(ctx context.Context) (*[]Token, error) {
 	response := &ListTokensResponse{}
-	err := NewRequest("POST", "/api/listTokens", scalyr).withReadConfig().withWriteConfig().jsonRequest(&ListTokensRequest{}).jsonResponse(response)
+	err := NewRequest("POST", "/api/listTokens", scalyr).withReadConfig().withWriteConfig().jsonRequest(&ListTokensRequest{}).jsonResponse(ctx, response)
 	log.Printf("%v", response)
 	return &response.Tokens, err
 }

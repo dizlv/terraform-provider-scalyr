@@ -1,7 +1,9 @@
 package scalyr
 
 import (
+	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
 	"strings"
 	"time"
@@ -33,7 +35,7 @@ func fixTypes(in *[]map[string]interface{}) *[]map[string]interface{} {
 
 func datasourceQuery() *schema.Resource {
 	return &schema.Resource{
-		Read: datasourceQueryRead,
+		ReadContext: datasourceQueryRead,
 		Schema: map[string]*schema.Schema{
 			"query": {
 				Type:     schema.TypeString,
@@ -83,7 +85,7 @@ func datasourceQuery() *schema.Resource {
 	}
 }
 
-func datasourceQueryRead(d *schema.ResourceData, meta interface{}) error {
+func datasourceQueryRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*scalyr.ScalyrConfig)
 	queryType := d.Get("query_type").(string)
 	query := strings.TrimSuffix(d.Get("query").(string), "\n")
@@ -103,14 +105,14 @@ func datasourceQueryRead(d *schema.ResourceData, meta interface{}) error {
 	request.Range(startTime, endTime)
 
 	for i := 0; i < retryCount; i++ {
-		res, err := request.Fetch()
+		res, err := request.Fetch(ctx)
 		if err != nil {
 			log.Fatalf("Error Executing Query: %v - %v", query, err)
 		}
 
 		log.Printf("Res: %v", &res)
 		if err = d.Set("results", *fixTypes(&res)); err != nil {
-			return fmt.Errorf("Error setting results - %v", err)
+			return diag.FromErr(fmt.Errorf("Error setting results - %v", err))
 		}
 
 		if expectedCount < 0 || expectedCount == int(request.Size()) {
@@ -120,5 +122,5 @@ func datasourceQueryRead(d *schema.ResourceData, meta interface{}) error {
 			time.Sleep(time.Duration(retryWait) * time.Second)
 		}
 	}
-	return fmt.Errorf("Error Executing Query: %v", query)
+	return diag.FromErr(fmt.Errorf("Error Executing Query: %v", query))
 }
