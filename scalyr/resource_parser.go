@@ -2,7 +2,6 @@ package scalyr
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	scalyr "github.com/ansoni/terraform-provider-scalyr/scalyr-go"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -103,19 +102,9 @@ func resourceParserCreate(ctx context.Context, data *schema.ResourceData, meta i
 	name := data.Get(NameArg).(string)
 	formatsRaw := data.Get(FormatsArg).([]interface{})
 
-	formats := make(scalyr.Formats, len(formatsRaw))
-
-	// todo: refactor this bit.
-	for _, f := range formatsRaw {
-		var format scalyr.Format
-
-		d := []byte(fmt.Sprint(f))
-
-		if err := json.Unmarshal(d, &format); err != nil {
-			return diag.FromErr(err)
-		}
-
-		formats = append(formats, format)
+	formats, err := TransformType[[]any, scalyr.Format](formatsRaw)
+	if err != nil {
+		return diag.FromErr(err)
 	}
 
 	input := &scalyr.CreateParserInput{
