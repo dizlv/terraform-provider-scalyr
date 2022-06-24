@@ -83,21 +83,21 @@ func CreateProvider() *schema.Provider {
 		},
 
 		ResourcesMap: map[string]*schema.Resource{
-			"scalyr_event":                 resourceEvent(),
-			"scalyr_file":                  resourceFile(),
-			"scalyr_monitor":               resourceMonitor(),
-			"scalyr_parser":                resourceParser(),
-			"scalyr_parser_format_rewrite": resourceParserFormatRewrite(),
-			"scalyr_parser_line_grouper":   resourceParserLineGrouper(),
-			"scalyr_parser_pattern":        resourceParserPattern(),
+			"scalyr_event":   resourceEvent(),
+			"scalyr_file":    resourceFile(),
+			"scalyr_monitor": resourceMonitor(),
+			"scalyr_parser":  resourceParser(),
 		},
 
 		DataSourcesMap: map[string]*schema.Resource{
-			"scalyr_file":          datasourceFile(),
-			"scalyr_query":         datasourceQuery(),
-			"scalyr_teams":         datasourceTeams(),
-			"scalyr_tokens":        datasourceTokens(),
-			"scalyr_parser_format": dataSourceParserFormat(),
+			"scalyr_file":                  datasourceFile(),
+			"scalyr_query":                 datasourceQuery(),
+			"scalyr_teams":                 datasourceTeams(),
+			"scalyr_tokens":                datasourceTokens(),
+			"scalyr_parser_format":         dataSourceParserFormat(),
+			"scalyr_parser_format_rewrite": dataSourceParserFormatRewrite(),
+			"scalyr_parser_line_grouper":   dataSourceParserLineGrouper(),
+			"scalyr_parser_pattern":        dataSourceParserPattern(),
 		},
 
 		ConfigureContextFunc: providerConfigure,
