@@ -1,12 +1,13 @@
 package sdk
 
 import (
+	"context"
 	"log"
 )
 
 type Query interface {
 	Range(start string, end string) Query
-	Fetch() ([]map[string]interface{}, error)
+	Fetch(ctx context.Context) ([]map[string]interface{}, error)
 	HasMore() bool
 	Size() float64
 }
@@ -62,10 +63,10 @@ type PowerQueryResponse struct {
 	Values            [][]interface{}     `json:"values"`
 }
 
-func (s *ScalyrConfig) NewPowerQuery(query string) Query {
+func (scalyr *ScalyrConfig) NewPowerQuery(query string) Query {
 	pq := &PowerQuery{}
 	pq.Query = query
-	pq.config = s
+	pq.config = scalyr
 	return pq
 }
 
@@ -79,11 +80,11 @@ func (q *PowerQuery) Size() float64 {
 	return q.last.MatchingEvents
 }
 
-func (q *PowerQuery) Fetch() ([]map[string]interface{}, error) {
+func (q *PowerQuery) Fetch(ctx context.Context) ([]map[string]interface{}, error) {
 
 	response := &PowerQueryResponse{}
 	request := &PowerQueryRequest{PowerQuery: *q}
-	err := NewRequest("POST", "/api/powerQuery", q.config).withReadLog().jsonRequest(request).jsonResponse(response)
+	err := NewRequest("POST", "/api/powerQuery", q.config).withReadLog().jsonRequest(request).jsonResponse(ctx, response)
 	if err != nil {
 		return nil, err
 	}

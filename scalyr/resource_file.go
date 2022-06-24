@@ -1,18 +1,20 @@
-package main
+package scalyr
 
 import (
+	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
-	"github.com/hashicorp/terraform/helper/schema"
 	scalyr "github.com/ansoni/terraform-provider-scalyr/scalyr-go"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func resourceFile() *schema.Resource {
 	return &schema.Resource{
-		Read:   resourceFileRead,
-		Delete: resourceFileDelete,
-		Update: resourceFileUpdate,
-		Create: resourceFileCreate,
+		ReadContext:   resourceFileRead,
+		DeleteContext: resourceFileDelete,
+		UpdateContext: resourceFileUpdate,
+		CreateContext: resourceFileCreate,
 		Schema: map[string]*schema.Schema{
 			"path": {
 				Type:     schema.TypeString,
@@ -38,43 +40,43 @@ func resourceFile() *schema.Resource {
 	}
 }
 
-func resourceFileCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceFileCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*scalyr.ScalyrConfig)
 	path := d.Get("path").(string)
 	content := d.Get("content").(string)
-	_, err := client.PutFile(path, content)
+	_, err := client.PutFile(ctx, path, content)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	return resourceFileRead(d, meta)
+	return resourceFileRead(ctx, d, meta)
 }
-func resourceFileUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceFileUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*scalyr.ScalyrConfig)
 	path := d.Get("path").(string)
 	content := d.Get("content").(string)
-	_, err := client.PutFile(path, content)
+	_, err := client.PutFile(ctx, path, content)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
-	return resourceFileRead(d, meta)
+	return resourceFileRead(ctx, d, meta)
 }
-func resourceFileDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceFileDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*scalyr.ScalyrConfig)
 	path := d.Get("path").(string)
-	err := client.DeleteFile(path)
+	err := client.DeleteFile(ctx, path)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	d.SetId("")
 	return nil
 }
 
-func resourceFileRead(d *schema.ResourceData, meta interface{}) error {
+func resourceFileRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*scalyr.ScalyrConfig)
 	path := d.Get("path").(string)
-	res, err := client.GetFile(path)
+	res, err := client.GetFile(ctx, path)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	d.Set("content", res.Content)
 	d.Set("version", res.Version)

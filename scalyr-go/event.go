@@ -1,6 +1,6 @@
 package sdk
 
-import ()
+import "context"
 
 type Event struct {
 	Thread string                 `json:"thread,omitempty"`
@@ -35,7 +35,7 @@ type CreateEventsResponse struct {
 	APIResponse
 }
 
-func (scalyr *ScalyrConfig) SendEvent(event *Event, thread *Thread, session string, sessionInfo *SessionInfo) error {
+func (scalyr *ScalyrConfig) SendEvent(ctx context.Context, event *Event, thread *Thread, session string, sessionInfo *SessionInfo) error {
 	events := make([]Event, 0)
 	threads := make([]Thread, 0)
 	if event != nil {
@@ -44,16 +44,16 @@ func (scalyr *ScalyrConfig) SendEvent(event *Event, thread *Thread, session stri
 	if thread != nil {
 		threads = append(threads, *thread)
 	}
-	return scalyr.SendEvents(&events, &threads, session, sessionInfo)
+	return scalyr.SendEvents(ctx, &events, &threads, session, sessionInfo)
 }
 
-func (scalyr *ScalyrConfig) SendEvents(events *[]Event, threads *[]Thread, session string, sessionInfo *SessionInfo) error {
+func (scalyr *ScalyrConfig) SendEvents(ctx context.Context, events *[]Event, threads *[]Thread, session string, sessionInfo *SessionInfo) error {
 	response := &CreateEventsResponse{}
 	request := &CreateEventsRequest{}
 	request.Session = session
 	request.SessionInfo = sessionInfo
 	request.Events = events
 	request.Threads = threads
-	err := NewRequest("POST", "/api/addEvents", scalyr).withWriteLog().jsonRequest(request).jsonResponse(response)
+	err := NewRequest("POST", "/api/addEvents", scalyr).withWriteLog().jsonRequest(request).jsonResponse(ctx, response)
 	return err
 }

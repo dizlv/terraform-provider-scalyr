@@ -1,13 +1,15 @@
-package main
+package scalyr
 
 import (
+	"context"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"os"
 	"strconv"
 	"time"
 
-	"github.com/google/uuid"
-	"github.com/hashicorp/terraform/helper/schema"
 	scalyr "github.com/ansoni/terraform-provider-scalyr/scalyr-go"
+	"github.com/google/uuid"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 var u, _ = uuid.NewUUID()
@@ -15,9 +17,9 @@ var session = u.String()
 
 func resourceEvent() *schema.Resource {
 	return &schema.Resource{
-		Read:   resourceEventRead,
-		Create: resourceEventCreate,
-		Delete: resourceEventDelete,
+		Read:          resourceEventRead,
+		CreateContext: resourceEventCreate,
+		Delete:        resourceEventDelete,
 		Schema: map[string]*schema.Schema{
 			"parser": {
 				Type:     schema.TypeString,
@@ -48,7 +50,7 @@ func resourceEventDelete(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func resourceEventCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceEventCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*scalyr.ScalyrConfig)
 	event := &scalyr.Event{}
 	event.Ts = strconv.FormatInt(time.Now().UnixNano(), 10)
@@ -67,7 +69,7 @@ func resourceEventCreate(d *schema.ResourceData, meta interface{}) error {
 		}
 	}
 	hostname, _ := os.Hostname()
-	client.SendEvent(event, nil, session, &scalyr.SessionInfo{ServerID: hostname})
+	client.SendEvent(ctx, event, nil, session, &scalyr.SessionInfo{ServerID: hostname})
 	d.SetId(time.Now().UTC().String())
 	return nil
 }

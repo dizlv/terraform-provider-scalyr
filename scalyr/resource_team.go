@@ -1,7 +1,7 @@
-package main
+package scalyr
 
 import (
-	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func resourceTeam() *schema.Resource {
@@ -9,12 +9,12 @@ func resourceTeam() *schema.Resource {
 		Create: resourceTeamCreate,
 		Read:   resourceTeamRead,
 		Schema: map[string]*schema.Schema{
-			"email_address": &schema.Schema{
+			"email_address": {
 				Type:     schema.TypeString,
 				ForceNew: true,
 				Required: true,
 			},
-			"token": &schema.Schema{
+			"token": {
 				Type:     schema.TypeString,
 				Computed: true,
 			},

@@ -1,6 +1,6 @@
 package sdk
 
-import ()
+import "context"
 
 type Team struct {
 	Token        string `json:"token"`
@@ -25,9 +25,9 @@ type CreateTeamResponse struct {
 	CreateTeamResponseParams
 }
 
-func (scalyr *ScalyrConfig) CreateTeam(email string) (*CreateTeamResponse, error) {
+func (scalyr *ScalyrConfig) CreateTeam(ctx context.Context, email string) (*CreateTeamResponse, error) {
 	response := &CreateTeamResponse{}
-	err := NewRequest("POST", "/api/listTeamAccounts", scalyr).withReadConfig().withWriteConfig().jsonRequest(&ListTeamsRequest{}).jsonResponse(response)
+	err := NewRequest("POST", "/api/listTeamAccounts", scalyr).withReadConfig().withWriteConfig().jsonRequest(&ListTeamsRequest{}).jsonResponse(ctx, response)
 	return response, err
 }
 
@@ -40,8 +40,8 @@ type ListTeamsResponse struct {
 	Teams []string `json:"teams"`
 }
 
-func (scalyr *ScalyrConfig) ListTeams() (*[]string, error) {
+func (scalyr *ScalyrConfig) ListTeams(ctx context.Context) (*[]string, error) {
 	teamsResponse := &ListTeamsResponse{}
-	err := NewRequest("POST", "/api/listTeamAccounts", scalyr).withReadConfig().withWriteConfig().jsonRequest(&ListTeamsRequest{}).jsonResponse(teamsResponse)
+	err := NewRequest("POST", "/api/listTeamAccounts", scalyr).withReadConfig().withWriteConfig().jsonRequest(&ListTeamsRequest{}).jsonResponse(ctx, teamsResponse)
 	return &teamsResponse.Teams, err
 }

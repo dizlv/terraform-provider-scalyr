@@ -2,12 +2,21 @@ package sdk
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"os"
+	"path"
+	"time"
+)
+
+const (
+	httpClientTimeout = 15 * time.Second
 )
 
 func validateAPIResponse(response *APIResponse, message string) error {
@@ -133,7 +142,19 @@ func (r *Request) emptyRequest() *Request {
 	return r
 }
 
-func (r *Request) jsonResponse(response interface{}) error {
+func prepareRequestBody(data interface{}) ([]byte, error) {
+	switch data := data.(type) {
+	default:
+		b, err := json.Marshal(data)
+		if err != nil {
+			return nil, err
+		}
+
+		return b, nil
+	}
+}
+
+func (r *Request) jsonResponse(ctx context.Context, response interface{}) error {
 	if r.err != nil {
 		return r.err
 	}
@@ -148,30 +169,62 @@ func (r *Request) jsonResponse(response interface{}) error {
 		r.request.(APIRequest).setToken(r.apiKey)
 	}
 
-	url := fmt.Sprintf("%v%v", r.config.Endpoint, r.uri)
-	buffer, err := json.Marshal(r.request)
+	// Validate endpoint
+	parsedUrl, err := url.Parse(r.config.Endpoint)
 	if err != nil {
-		r.err = err
 		return err
 	}
-	log.Printf("Call %v %v with %v\n", r.requestType, url, string(buffer))
-	req, err := http.NewRequest(r.requestType, url, bytes.NewReader(buffer))
+
+	parsedUrl.Path = path.Join(parsedUrl.Path, r.uri)
+	body, err := prepareRequestBody(r.request)
+
+	request, err := http.NewRequest(r.requestType, parsedUrl.String(), bytes.NewBuffer(body))
 	if err != nil {
-		log.Printf("Failure in creating NewRequest")
 		return err
 	}
-	req.Header.Add("Content-Type", "application/json")
-	httpClient := http.Client{}
-	resp, err := httpClient.Do(req)
+
+	request.Header.Set("Accept", "application/json")
+	request.Header.Set("Content-Type", "application/json")
+
+	dumpRequest, err := httputil.DumpRequest(request, true)
 	if err != nil {
-		r.err = err
-		log.Printf("Error %v", r.err)
 		return err
 	}
-	r.responseBody, r.err = ioutil.ReadAll(resp.Body)
-	log.Printf("Response")
-	for _, chunk := range Chunk(string(r.responseBody), 200) {
-		log.Printf("%v", chunk)
+
+	log.Printf("Outgoing Request: %s", dumpRequest)
+
+	httpClient := http.Client{
+		Timeout: httpClientTimeout,
 	}
-	return json.Unmarshal(r.responseBody, &response)
+
+	resp, err := httpClient.Do(request)
+	if err != nil {
+		return err
+	}
+
+	dumpResponse, err := httputil.DumpResponse(resp, true)
+	if err != nil {
+		return err
+	}
+
+	log.Printf("Incoming Response: %s", dumpResponse)
+
+	defer resp.Body.Close()
+
+	responseBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		if err := json.Unmarshal(responseBody, &response); err != nil {
+			return fmt.Errorf("could not decode response JSON, %s: %v", string(responseBody), err)
+		}
+
+		return nil
+
+	default:
+		return fmt.Errorf("")
+	}
 }

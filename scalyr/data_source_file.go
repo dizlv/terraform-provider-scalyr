@@ -1,15 +1,16 @@
-package main
+package scalyr
 
 import (
-	"github.com/hashicorp/terraform/helper/schema"
-	_ "github.com/hashicorp/terraform/terraform"
+	"context"
 	scalyr "github.com/ansoni/terraform-provider-scalyr/scalyr-go"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"time"
 )
 
 func datasourceFile() *schema.Resource {
 	return &schema.Resource{
-		Read: datasourceFileRead,
+		ReadContext: datasourceFileRead,
 		Schema: map[string]*schema.Schema{
 			"path": {
 				Type:     schema.TypeString,
@@ -35,12 +36,12 @@ func datasourceFile() *schema.Resource {
 	}
 }
 
-func datasourceFileRead(d *schema.ResourceData, meta interface{}) error {
+func datasourceFileRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*scalyr.ScalyrConfig)
 	path := d.Get("path").(string)
-	res, err := client.GetFile(path)
+	res, err := client.GetFile(ctx, path)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 	d.Set("content", res.Content)
 	d.Set("version", res.Version)
