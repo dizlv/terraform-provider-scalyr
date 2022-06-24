@@ -6,8 +6,6 @@ import (
 	"fmt"
 )
 
-const ParserConfigurationFilePath = "/logParsers/"
-
 // Rewrite rule searches a field for a specified regular expression, and replaces the first match with a different string.
 // Each rule is applied in order
 type Rewrite struct {
@@ -24,33 +22,35 @@ type Rewrite struct {
 	Replace string `json:"replace"`
 
 	// Should replace all occurrances
-	ReplaceAll bool `json:"replace_all"`
+	ReplaceAll bool `json:"replace_all,omitempty"`
 }
 
 type Format struct {
 	Name     string
-	Format   string     `json:"format"`
-	Halt     bool       `json:"halt,omitempty"`
-	Rewrites []*Rewrite `json:"rewrites,omitempty"`
-	Repeat   bool       `json:"repeat,omitempty"`
-	Discard  bool       `json:"discard,omitempty"`
+	Format   string    `json:"format"`
+	Halt     bool      `json:"halt,omitempty"`
+	Rewrites []Rewrite `json:"rewrites,omitempty"`
+	Repeat   bool      `json:"repeat,omitempty"`
+	Discard  bool      `json:"discard,omitempty"`
 	// Each format can have dynamically named key with some value - those are the attributes that will be attached to a each parsed log
 }
 
 type LineGrouper struct {
-	Start           string `json:"start"`
-	ContinueThrough string `json:"continue_through"`
-	ContinuePast    string `json:"continue_past"`
-	HaltBefore      string `json:"halt_before"`
-	HaltWith        string `json:"halt_with"`
-	MaxChars        int    `json:"max_chars"`
-	MaxLines        int    `json:"max_lines"`
+	Start           string `json:"start,omitempty"`
+	ContinueThrough string `json:"continue_through,omitempty"`
+	ContinuePast    string `json:"continue_past,omitempty"`
+	HaltBefore      string `json:"halt_before,omitempty"`
+	HaltWith        string `json:"halt_with,omitempty"`
+	MaxChars        int    `json:"max_chars,omitempty"`
+	MaxLines        int    `json:"max_lines,omitempty"`
 }
 
 type LineGroupers []LineGrouper
 
 type Attributes = map[string]string
-type Patterns = map[string]string
+
+type Pattern = string
+type Patterns = map[string]Pattern
 
 type Formats []Format
 
