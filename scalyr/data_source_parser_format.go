@@ -97,13 +97,12 @@ func dataSourceParserFormatRead(ctx context.Context, data *schema.ResourceData, 
 
 	// load rewrites from string
 	if v, ok := data.GetOk("rewrites"); ok {
-		var rewriteDocuments []*scalyr.Rewrite
-
-		if err := json.Unmarshal([]byte(v.(string)), &rewriteDocuments); err != nil {
+		rewrites, err := TransformType[[]any, scalyr.Rewrite](v.([]interface{}))
+		if err != nil {
 			return diag.FromErr(err)
 		}
 
-		mergedDocument.Rewrites = rewriteDocuments
+		mergedDocument.Rewrites = rewrites
 	}
 
 	jsonDocument, err := json.MarshalIndent(mergedDocument, "", " ")

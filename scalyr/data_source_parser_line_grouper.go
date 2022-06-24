@@ -1,15 +1,20 @@
 package scalyr
 
 import (
-	scalyr "ansoni/terraform-provider-scalyr/scalyr-go"
 	"context"
 	"encoding/json"
+	scalyr "github.com/ansoni/terraform-provider-scalyr/scalyr-go"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"strconv"
 )
 
 var ParserLineGrouperSchema = map[string]*schema.Schema{
+	"json": {
+		Type:     schema.TypeString,
+		Computed: true,
+	},
+
 	"start": {
 		Type:        schema.TypeString,
 		Description: "",
@@ -53,7 +58,7 @@ var ParserLineGrouperSchema = map[string]*schema.Schema{
 	},
 }
 
-func resourceParserLineGrouper() *schema.Resource {
+func dataSourceParserLineGrouper() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: resourceParserLineGrouperRead,
 
